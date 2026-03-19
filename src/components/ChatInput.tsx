@@ -1,20 +1,39 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   onCancel: () => void;
   isLoading: boolean;
   isStreaming: boolean;
+  /** If provided, component auto-focuses on mount */
+  autoFocus?: boolean;
+  /** Called when Escape is pressed and not streaming */
+  onEscape?: () => void;
 }
+
+const PLACEHOLDER_SUGGESTIONS = [
+  'Pergunte algo...',
+  'Digite sua mensagem...',
+  'O que você quer saber?',
+  'Fala comigo...',
+  'Manda a ver...',
+  'Me conta o problema...',
+  'Qual é a dúvida?',
+  'Tô ouvindo...',
+];
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   onCancel,
   isLoading,
   isStreaming,
+  autoFocus = false,
+  onEscape,
 }) => {
   const [input, setInput] = useState('');
   const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxRows = 5;
   const charCount = input.length;
@@ -30,11 +49,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [input, showEasterEgg]);
 
-  // Auto-focus on mount
+  // Auto-focus on mount (or when autoFocus prop changes)
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
+    if (autoFocus && textareaRef.current) {
+      // Small delay to ensure DOM is ready
+      const t = setTimeout(() => textareaRef.current?.focus(), 50);
+      return () => clearTimeout(t);
     }
+  }, [autoFocus]);
+
+  // Rotating placeholder — only when input is empty & not focused
+  useEffect(() => {
+    if (input || isFocused) return;
+    const interval = setInterval(() => {
+      setPlaceholderIdx(prev => (prev + 1) % PLACEHOLDER_SUGGESTIONS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [input, isFocused]);
+
+  // Expose focus method via ref
+  const focusInput = useCallback(() => {
+    textareaRef.current?.focus();
   }, []);
 
   // Auto-resize textarea
@@ -66,10 +101,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       e.preventDefault();
       handleSubmit();
     }
-    // Escape = cancel streaming
-    if (e.key === 'Escape' && isStreaming) {
+    // Escape = cancel streaming or collapse
+    if (e.key === 'Escape') {
       e.preventDefault();
-      onCancel();
+      if (isStreaming) {
+        onCancel();
+      } else if (onEscape) {
+        onEscape();
+      }
     }
   };
 
@@ -85,7 +124,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isDisabled ? 'Aguardando resposta...' : 'Digite sua mensagem...'}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={isDisabled ? 'Aguardando resposta...' : PLACEHOLDER_SUGGESTIONS[placeholderIdx]}
             disabled={isDisabled}
             rows={1}
             className="flex-1 bg-transparent border-0 resize-none px-4 py-3.5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-0 min-h-[52px] max-h-[140px] scrollbar-thin"

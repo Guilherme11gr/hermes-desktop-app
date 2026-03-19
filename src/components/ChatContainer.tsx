@@ -368,6 +368,7 @@ export const ChatContainer: React.FC = () => {
           onCancel={handleCancel}
           isLoading={isLoading}
           isStreaming={isStreaming}
+          autoFocus
         />
       </div>
     </div>

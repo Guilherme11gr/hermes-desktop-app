@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatMessages } from '../ChatMessages';
 import { ChatInput } from '../ChatInput';
 import { Message } from '../../types';
@@ -14,6 +14,51 @@ interface FloatChatProps {
   onSendMessage: (content: string) => void;
   onCancel: () => void;
   onCollapse: () => void;
+}
+
+const FLOAT_CHAT_STYLES = `
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  animation: scrollBtnIn 0.2s ease-out;
+}
+.scroll-to-bottom-btn.light {
+  background: white;
+  color: #374151;
+}
+.scroll-to-bottom-btn.dark {
+  background: #1f2937;
+  color: #d1d5db;
+}
+.scroll-to-bottom-btn:hover {
+  transform: translateX(-50%) scale(1.1);
+}
+@keyframes scrollBtnIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+`;
+
+let floatStylesInjected = false;
+function injectFloatStyles() {
+  if (floatStylesInjected || typeof document === 'undefined') return;
+  floatStylesInjected = true;
+  const s = document.createElement('style');
+  s.textContent = FLOAT_CHAT_STYLES;
+  document.head.appendChild(s);
 }
 
 export const FloatChat: React.FC<FloatChatProps> = ({
@@ -35,7 +80,11 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     return false;
   });
 
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  injectFloatStyles();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -63,6 +112,18 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     const interval = setInterval(checkTheme, 500);
     return () => clearInterval(interval);
   }, []);
+
+  // Global ESC handler — collapse chat even when input is not focused
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCollapse();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onCollapse]);
 
   // Native DOM drag for header — same approach as FloatButton
   useEffect(() => {
@@ -185,7 +246,16 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '8px 12px' }}>
+      <div
+        ref={scrollAreaRef}
+        style={{ flex: 1, overflow: 'auto', padding: '8px 12px', position: 'relative' }}
+        onScroll={() => {
+          const el = scrollAreaRef.current;
+          if (!el) return;
+          const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          setShowScrollBtn(!isNearBottom);
+        }}
+      >
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
@@ -193,6 +263,20 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           currentStreamText={currentStreamText}
           messagesEndRef={messagesEndRef}
         />
+
+        {showScrollBtn && (
+          <button
+            className={`scroll-to-bottom-btn ${isDarkMode ? 'dark' : 'light'}`}
+            onClick={() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            title="Voltar ao final"
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div style={{ padding: 8, borderTop: `1px solid ${borderColor}` }}>
@@ -201,6 +285,8 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           onCancel={onCancel}
           isLoading={isLoading}
           isStreaming={isStreaming}
+          autoFocus
+          onEscape={onCollapse}
         />
       </div>
     </div>

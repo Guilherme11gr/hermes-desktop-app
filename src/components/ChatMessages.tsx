@@ -91,8 +91,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             key={message.id}
             className={`flex ${
               message.role === 'user' ? 'justify-end' : 'justify-start'
-            } animate-fadeIn`}
-            style={{ animationDelay: `${index * 0.05}s` }}
+            } message-enter`}
+            style={{ animationDelay: `${index * 0.03}s` }}
           >
             <div
               className={`max-w-[80%] sm:max-w-[75%] lg:max-w-[70%] group ${
