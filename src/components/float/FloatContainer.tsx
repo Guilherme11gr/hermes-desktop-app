@@ -23,7 +23,9 @@ export const FloatContainer: React.FC = () => {
 
   const resizeWindow = async (expanded: boolean) => {
     try {
-      await invoke('resize_float_window', { expanded });
+      console.log('[FloatContainer] resizeWindow chamado, expanded:', expanded);
+      const result = await invoke('resize_float_window', { expanded });
+      console.log('[FloatContainer] resizeWindow resultado:', result);
     } catch (e) {
       console.error('[FloatContainer] Erro ao redimensionar:', e);
     }
