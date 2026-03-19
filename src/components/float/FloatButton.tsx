@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const ASCII_FACES = {
@@ -17,7 +17,8 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
 }) => {
   const [face, setFace] = useState('(◕‿◕)');
   const divRef = useRef<HTMLDivElement>(null);
-  const hasDraggedRef = useRef(false);
+  const onExpandRef = useRef(onExpand);
+  onExpandRef.current = onExpand;
 
   // Face animation
   useEffect(() => {
@@ -29,56 +30,48 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     return () => clearInterval(interval);
   }, [isThinking]);
 
-  // Native DOM drag handler — NOT React events
+  // Native DOM: handle drag AND click detection
   useEffect(() => {
     const el = divRef.current;
     if (!el) return;
 
-    const onMouseDown = (_e: MouseEvent) => {
-      hasDraggedRef.current = false;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
 
-      // Record position BEFORE starting drag
+      const startTime = Date.now();
       let moved = false;
 
       const onMouseMove = () => {
-        if (!moved) {
-          moved = true;
-          hasDraggedRef.current = true;
-        }
+        moved = true;
       };
 
       const onMouseUp = () => {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+
+        const elapsed = Date.now() - startTime;
+        // Click = mouseup within 300ms and no movement
+        if (!moved && elapsed < 300) {
+          onExpandRef.current();
+        }
       };
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
 
-      // Call startDragging synchronously — this hands control to the OS
+      // Start OS-level drag
       try {
         getCurrentWindow().startDragging();
-      } catch {
-        // Not in Tauri
-      }
+      } catch {}
     };
 
     el.addEventListener('mousedown', onMouseDown);
     return () => el.removeEventListener('mousedown', onMouseDown);
   }, []);
 
-  const handleClick = useCallback(() => {
-    if (hasDraggedRef.current) {
-      hasDraggedRef.current = false;
-      return;
-    }
-    onExpand();
-  }, [onExpand]);
-
   return (
     <div
       ref={divRef}
-      onClick={handleClick}
       style={{
         width: 60,
         height: 60,
