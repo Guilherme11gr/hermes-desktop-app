@@ -2,9 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Float mode - no scrollbars on root */
-html, body {
+/* Float mode - transparent background, no scrollbars */
+html, body, #root {
   overflow: hidden !important;
+  background: transparent !important;
+}
+
+/* Kill any outline/border on focused elements in float mode */
+*:focus {
+  outline: none !important;
 }
 
 /* Custom scrollbar */

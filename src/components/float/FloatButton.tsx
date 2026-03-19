@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
 
 const ASCII_FACES = {
   idle: ['(◕‿◕)', '(◠‿◠)', '(◕ᴗ◕)'],
@@ -20,7 +20,6 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   const onExpandRef = useRef(onExpand);
   onExpandRef.current = onExpand;
 
-  // Face animation
   useEffect(() => {
     const faces = isThinking ? ASCII_FACES.thinking : ASCII_FACES.idle;
     const interval = window.setInterval(() => {
@@ -30,39 +29,44 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     return () => clearInterval(interval);
   }, [isThinking]);
 
-  // Native DOM: handle drag AND click detection
+  // Manual drag via setPosition + click detection
   useEffect(() => {
     const el = divRef.current;
     if (!el) return;
 
-    const onMouseDown = (e: MouseEvent) => {
+    const onMouseDown = async (e: MouseEvent) => {
       if (e.button !== 0) return;
 
-      const startTime = Date.now();
+      const startClientX = e.clientX;
+      const startClientY = e.clientY;
       let moved = false;
 
-      const onMouseMove = () => {
-        moved = true;
+      let winX = 0, winY = 0;
+      try {
+        const pos = await getCurrentWindow().outerPosition();
+        winX = pos.x;
+        winY = pos.y;
+      } catch { return; }
+
+      const onMouseMove = async (ev: MouseEvent) => {
+        const dx = ev.clientX - startClientX;
+        const dy = ev.clientY - startClientY;
+        if (!moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) moved = true;
+        if (moved) {
+          try {
+            await getCurrentWindow().setPosition(new PhysicalPosition(winX + dx, winY + dy));
+          } catch {}
+        }
       };
 
       const onMouseUp = () => {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
-
-        const elapsed = Date.now() - startTime;
-        // Click = mouseup within 300ms and no movement
-        if (!moved && elapsed < 300) {
-          onExpandRef.current();
-        }
+        if (!moved) onExpandRef.current();
       };
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
-
-      // Start OS-level drag
-      try {
-        getCurrentWindow().startDragging();
-      } catch {}
     };
 
     el.addEventListener('mousedown', onMouseDown);
@@ -72,27 +76,25 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   return (
     <div
       ref={divRef}
+      tabIndex={-1}
       style={{
-        width: 60,
-        height: 60,
+        width: '100%',
+        height: '100%',
         borderRadius: '50%',
         background: 'rgba(99, 102, 241, 0.95)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
         cursor: 'grab',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',
+        outline: 'none',
       }}
-      title="Hermes - Clique para conversar, arraste para mover"
     >
       <span
         style={{
           fontSize: 20,
           fontFamily: 'monospace',
           color: 'white',
-          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-          whiteSpace: 'pre',
           pointerEvents: 'none',
         }}
       >
