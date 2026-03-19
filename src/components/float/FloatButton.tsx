@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
 
 const ASCII_FACES = {
   idle: ['(◕‿◕)', '(◠‿◠)', '(◕ᴗ◕)'],
@@ -8,7 +8,6 @@ const ASCII_FACES = {
 };
 
 const DRAG_THRESHOLD = 5;
-const LONG_PRESS_DELAY = 150;
 
 interface FloatButtonProps {
   isThinking?: boolean;
@@ -22,10 +21,10 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   const [face, setFace] = useState('(◕‿◕)');
   const [isDragging, setIsDragging] = useState(false);
   
-  const startPosRef = useRef({ x: 0, y: 0 });
+  const dragStartMouse = useRef({ x: 0, y: 0 });
+  const dragStartWindow = useRef({ x: 0, y: 0 });
   const hasDraggedRef = useRef(false);
-  const isPressingRef = useRef(false);
-  const longPressTimerRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
   const faceIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -45,66 +44,53 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     };
   }, [isThinking]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = async (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-    hasDraggedRef.current = false;
-    isPressingRef.current = true;
-
-    longPressTimerRef.current = window.setTimeout(() => {
-      if (isPressingRef.current) {
-        startWindowDrag();
-      }
-    }, LONG_PRESS_DELAY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPressingRef.current) return;
-
-    const dx = e.clientX - startPosRef.current.x;
-    const dy = e.clientY - startPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > DRAG_THRESHOLD) {
-      hasDraggedRef.current = true;
-      
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      
-      startWindowDrag();
-    }
-  };
-
-  const handleMouseUp = () => {
-    isPressingRef.current = false;
-    setIsDragging(false);
-    
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const startWindowDrag = async () => {
-    if (isDragging) return;
-    setIsDragging(true);
+    dragStartMouse.current = { x: e.clientX, y: e.clientY };
     
     try {
-      await getCurrentWindow().startDragging();
+      const window = getCurrentWindow();
+      const pos = await window.outerPosition();
+      dragStartWindow.current = { x: pos.x, y: pos.y };
     } catch {
-      // Not in Tauri environment
+      return;
     }
+    
+    hasDraggedRef.current = false;
+    isDraggingRef.current = false;
+
+    const handleMouseMove = async (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - dragStartMouse.current.x;
+      const dy = moveEvent.clientY - dragStartMouse.current.y;
+      
+      if (!hasDraggedRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        hasDraggedRef.current = true;
+        isDraggingRef.current = true;
+        setIsDragging(true);
+      }
+      
+      if (isDraggingRef.current) {
+        try {
+          const newX = dragStartWindow.current.x + dx;
+          const newY = dragStartWindow.current.y + dy;
+          await getCurrentWindow().setPosition(new PhysicalPosition(newX, newY));
+        } catch {}
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleClick = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
     if (hasDraggedRef.current) {
       hasDraggedRef.current = false;
       return;
@@ -116,9 +102,6 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   return (
     <div
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       onClick={handleClick}
       style={{
         width: 60,

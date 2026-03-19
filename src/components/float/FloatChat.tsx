@@ -3,7 +3,7 @@ import { ChatMessages } from '../ChatMessages';
 import { ChatInput } from '../ChatInput';
 import { Message } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
 
 const DRAG_THRESHOLD = 5;
 
@@ -37,8 +37,9 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     return false;
   });
 
-  const headerStartPosRef = useRef({ x: 0, y: 0 });
-  const isHeaderPressingRef = useRef(false);
+  const headerDragStartMouse = useRef({ x: 0, y: 0 });
+  const headerDragStartWindow = useRef({ x: 0, y: 0 });
+  const isHeaderDraggingRef = useRef(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -67,31 +68,46 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+  const handleHeaderMouseDown = async (e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    headerStartPosRef.current = { x: e.clientX, y: e.clientY };
-    isHeaderPressingRef.current = true;
-  };
-
-  const handleHeaderMouseMove = async (e: React.MouseEvent) => {
-    if (!isHeaderPressingRef.current) return;
-
-    const dx = e.clientX - headerStartPosRef.current.x;
-    const dy = e.clientY - headerStartPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > DRAG_THRESHOLD) {
-      isHeaderPressingRef.current = false;
-      try {
-        await getCurrentWindow().startDragging();
-      } catch {
-        // Not in Tauri environment
-      }
+    
+    headerDragStartMouse.current = { x: e.clientX, y: e.clientY };
+    
+    try {
+      const window = getCurrentWindow();
+      const pos = await window.outerPosition();
+      headerDragStartWindow.current = { x: pos.x, y: pos.y };
+    } catch {
+      return;
     }
-  };
+    
+    isHeaderDraggingRef.current = false;
 
-  const handleHeaderMouseUp = () => {
-    isHeaderPressingRef.current = false;
+    const handleMouseMove = async (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - headerDragStartMouse.current.x;
+      const dy = moveEvent.clientY - headerDragStartMouse.current.y;
+      
+      if (!isHeaderDraggingRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        isHeaderDraggingRef.current = true;
+      }
+      
+      if (isHeaderDraggingRef.current) {
+        try {
+          const newX = headerDragStartWindow.current.x + dx;
+          const newY = headerDragStartWindow.current.y + dy;
+          await getCurrentWindow().setPosition(new PhysicalPosition(newX, newY));
+        } catch {}
+      }
+    };
+
+    const handleMouseUp = () => {
+      isHeaderDraggingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleOpenMainWindow = async () => {
@@ -127,9 +143,6 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     >
       <div
         onMouseDown={handleHeaderMouseDown}
-        onMouseMove={handleHeaderMouseMove}
-        onMouseUp={handleHeaderMouseUp}
-        onMouseLeave={handleHeaderMouseUp}
         style={{
           display: 'flex',
           alignItems: 'center',
