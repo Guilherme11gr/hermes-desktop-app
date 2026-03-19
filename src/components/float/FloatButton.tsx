@@ -9,11 +9,13 @@ const ASCII_FACES = {
 interface FloatButtonProps {
   isThinking?: boolean;
   onExpand: () => void;
+  unreadCount?: number;
 }
 
 export const FloatButton: React.FC<FloatButtonProps> = ({ 
   isThinking = false, 
-  onExpand 
+  onExpand,
+  unreadCount = 0
 }) => {
   const [face, setFace] = useState('(◕‿◕)');
   const divRef = useRef<HTMLDivElement>(null);
@@ -69,35 +71,71 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   }, []);
 
   return (
-    <div
-      ref={divRef}
-      tabIndex={-1}
-      style={{
-        width: 60,
-        height: 60,
-        borderRadius: '50%',
-        background: 'rgba(99, 102, 241, 0.95)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
-        cursor: 'grab',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        userSelect: 'none',
-        outline: 'none',
-      }}
-      title="Hermes - Clique para conversar, arraste para mover"
-    >
-      <span
+    <>
+      {unreadCount > 0 && (
+        <style>
+          {`@keyframes pulse-badge {
+            0%, 100% { transform: scale(1.0); }
+            50% { transform: scale(1.08); }
+          }`}
+        </style>
+      )}
+      <div
+        ref={divRef}
+        tabIndex={-1}
         style={{
-          fontSize: 20,
-          fontFamily: 'monospace',
-          color: 'white',
-          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-          pointerEvents: 'none',
+          width: 60,
+          height: 60,
+          borderRadius: '50%',
+          background: 'rgba(99, 102, 241, 0.95)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
+          cursor: 'grab',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          userSelect: 'none',
+          outline: 'none',
+          position: 'relative',
         }}
+        title="Hermes - Clique para conversar, arraste para mover"
       >
-        {face}
-      </span>
-    </div>
+        <span
+          style={{
+            fontSize: 20,
+            fontFamily: 'monospace',
+            color: 'white',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+            pointerEvents: 'none',
+          }}
+        >
+          {face}
+        </span>
+        {unreadCount > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -6,
+              right: -6,
+              minWidth: 20,
+              height: 20,
+              background: '#ef4444',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              borderRadius: '50%',
+              border: '2px solid white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'pulse-badge 2s ease-in-out infinite',
+              padding: '0 4px',
+            }}
+          >
+            {unreadCount >= 10 ? '9+' : unreadCount}
+          </div>
+        )}
+      </div>
+    </>
   );
 };

@@ -7,8 +7,10 @@ import { invoke } from '@tauri-apps/api/core';
 
 export const FloatContainer: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const ignoreCollapseRef = useRef(false);
+  const prevMessagesLengthRef = useRef(messages.length);
 
   const {
     messages,
@@ -33,6 +35,7 @@ export const FloatContainer: React.FC = () => {
   const expand = useCallback(async () => {
     if (ignoreCollapseRef.current) return;
     ignoreCollapseRef.current = true;
+    setUnreadCount(0);
     setIsExpanded(true);
     // Wait for OS to finish processing any pending drag messages from startDragging()
     await new Promise(r => setTimeout(r, 200));
@@ -79,12 +82,24 @@ export const FloatContainer: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded, collapse]);
 
+  // Track unread messages
+  useEffect(() => {
+    if (messages.length > prevMessagesLengthRef.current) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.role === 'assistant' && !isExpanded) {
+        setUnreadCount(c => c + 1);
+      }
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length, isExpanded]);
+
   if (!isExpanded) {
     return (
       <div ref={containerRef}>
         <FloatButton
           isThinking={isLoading || isStreaming}
           onExpand={expand}
+          unreadCount={unreadCount}
         />
       </div>
     );
