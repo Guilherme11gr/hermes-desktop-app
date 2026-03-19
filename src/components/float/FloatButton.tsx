@@ -29,7 +29,6 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     return () => clearInterval(interval);
   }, [isThinking]);
 
-  // Manual drag via setPosition + click detection
   useEffect(() => {
     const el = divRef.current;
     if (!el) return;
@@ -43,7 +42,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
 
       let winX = 0, winY = 0;
       try {
-        const pos = await getCurrentWindow().outerPosition();
+        const pos = await getCurrentWindow().innerPosition();
         winX = pos.x;
         winY = pos.y;
       } catch { return; }
@@ -78,8 +77,8 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
       ref={divRef}
       tabIndex={-1}
       style={{
-        width: '100%',
-        height: '100%',
+        width: 60,
+        height: 60,
         borderRadius: '50%',
         background: 'rgba(99, 102, 241, 0.95)',
         cursor: 'grab',
