@@ -18,6 +18,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   const [face, setFace] = useState('(◕‿◕)');
   const divRef = useRef<HTMLDivElement>(null);
   const onExpandRef = useRef(onExpand);
+  const dragActiveRef = useRef(false);
   onExpandRef.current = onExpand;
 
   useEffect(() => {
@@ -29,31 +30,38 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     return () => clearInterval(interval);
   }, [isThinking]);
 
+  // Expose method to disable drag after expand
+  useEffect(() => {
+    const el = divRef.current;
+    if (!el) return;
+    (el as any).__disableDrag = () => { dragActiveRef.current = true; };
+  }, []);
+
   useEffect(() => {
     const el = divRef.current;
     if (!el) return;
 
-    const onMouseDown = async () => {
-      // Save position BEFORE drag
-      let posBefore = { x: 0, y: 0 };
-      try {
-        posBefore = await getCurrentWindow().outerPosition();
-      } catch { return; }
+    const onMouseDown = () => {
+      if (dragActiveRef.current) return;
 
-      // Start OS-level drag (smooth, blocks until mouseup)
-      try {
-        await getCurrentWindow().startDragging();
-      } catch {}
+      // Start a timer — if mouseup fires before 200ms, it's a click
+      let isClick = true;
+      const clickTimer = setTimeout(() => {
+        isClick = false;
+        // After 200ms, start drag
+        try { getCurrentWindow().startDragging(); } catch {}
+      }, 150);
 
-      // After drag completes, check if window moved
-      try {
-        const posAfter = await getCurrentWindow().outerPosition();
-        const moved = (posAfter.x !== posBefore.x) || (posAfter.y !== posBefore.y);
-        if (!moved) {
-          // No movement = it was a click, not a drag
+      const onMouseUp = () => {
+        clearTimeout(clickTimer);
+        document.removeEventListener('mouseup', onMouseUp);
+        if (isClick) {
+          // It was a quick click — expand
           onExpandRef.current();
         }
-      } catch {}
+      };
+
+      document.addEventListener('mouseup', onMouseUp);
     };
 
     el.addEventListener('mousedown', onMouseDown);

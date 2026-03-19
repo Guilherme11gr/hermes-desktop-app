@@ -8,7 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 export const FloatContainer: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const justExpandedRef = useRef(false);
+  const ignoreCollapseRef = useRef(false);
 
   const {
     messages,
@@ -31,28 +31,28 @@ export const FloatContainer: React.FC = () => {
   }, []);
 
   const expand = useCallback(async () => {
-    if (justExpandedRef.current) return;
-    justExpandedRef.current = true;
+    if (ignoreCollapseRef.current) return;
+    ignoreCollapseRef.current = true;
     setIsExpanded(true);
-    // Small delay to let OS finish processing any pending drag messages
-    await new Promise(r => setTimeout(r, 50));
+    // Wait for OS to finish processing any pending drag messages from startDragging()
+    await new Promise(r => setTimeout(r, 200));
     await resizeWindow(true);
-    // Reset flag after a moment
-    setTimeout(() => { justExpandedRef.current = false; }, 500);
+    // Re-enable collapse after chat is stable
+    setTimeout(() => { ignoreCollapseRef.current = false; }, 500);
   }, [resizeWindow]);
 
   const collapse = useCallback(async () => {
-    if (justExpandedRef.current) return;
+    if (ignoreCollapseRef.current) return;
     setIsExpanded(false);
     await resizeWindow(false);
   }, [resizeWindow]);
 
-  // Outside click to collapse — but NOT right after expanding
+  // Outside click to collapse
   useEffect(() => {
     if (!isExpanded) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (justExpandedRef.current) return;
+      if (ignoreCollapseRef.current) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         collapse();
       }
@@ -60,7 +60,7 @@ export const FloatContainer: React.FC = () => {
 
     const timeout = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-    }, 300);
+    }, 500);
 
     return () => {
       clearTimeout(timeout);
@@ -71,7 +71,7 @@ export const FloatContainer: React.FC = () => {
   // ESC to collapse
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isExpanded) {
+      if (e.key === 'Escape' && isExpanded && !ignoreCollapseRef.current) {
         collapse();
       }
     };
