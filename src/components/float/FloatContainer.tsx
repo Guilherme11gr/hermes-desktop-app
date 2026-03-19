@@ -30,13 +30,17 @@ export const FloatContainer: React.FC = () => {
   };
 
   const expand = async () => {
+    console.log('[FloatContainer] expand() chamado');
     setIsExpanded(true);
     await resizeWindow(true);
+    console.log('[FloatContainer] resizeWindow(true) concluído');
   };
 
   const collapse = async () => {
+    console.log('[FloatContainer] collapse() chamado');
     setIsExpanded(false);
     await resizeWindow(false);
+    console.log('[FloatContainer] resizeWindow(false) concluído');
   };
 
   useEffect(() => {
