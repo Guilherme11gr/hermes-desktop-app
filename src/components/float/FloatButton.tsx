@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 const ASCII_FACES = {
   idle: ['(◕‿◕)', '(◠‿◠)', '(◕ᴗ◕)'],
   thinking: ['(✧ω✧)', '(・_・)', '(•ᴗ•)', '(◠ω◠)'],
+  excited: ['(✧ω✧)', '(★ω★)', '(☆ω☆)', '(✧◡✧)'],
 };
 
 interface FloatButtonProps {
@@ -24,13 +25,17 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   onExpandRef.current = onExpand;
 
   useEffect(() => {
-    const faces = isThinking ? ASCII_FACES.thinking : ASCII_FACES.idle;
+    const faces = isThinking
+      ? ASCII_FACES.thinking
+      : unreadCount > 0
+        ? ASCII_FACES.excited
+        : ASCII_FACES.idle;
     const interval = window.setInterval(() => {
       setFace(faces[Math.floor(Math.random() * faces.length)]);
     }, 2000);
     setFace(faces[0]);
     return () => clearInterval(interval);
-  }, [isThinking]);
+  }, [isThinking, unreadCount]);
 
   // Expose method to disable drag after expand
   useEffect(() => {
@@ -77,6 +82,15 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
           {`@keyframes pulse-badge {
             0%, 100% { transform: scale(1.0); }
             50% { transform: scale(1.08); }
+          }
+          @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1), 0 0 15px rgba(129, 140, 248, 0.4), 0 0 30px rgba(129, 140, 248, 0.2); }
+            50% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1), 0 0 25px rgba(129, 140, 248, 0.6), 0 0 50px rgba(129, 140, 248, 0.3); }
+          }
+          @keyframes bounce-badge {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1.0); opacity: 1; }
           }`}
         </style>
       )}
@@ -88,7 +102,10 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
           height: 60,
           borderRadius: '50%',
           background: 'rgba(99, 102, 241, 0.95)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
+          boxShadow: unreadCount > 0
+            ? undefined // will be controlled by glow-pulse animation
+            : '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
+          animation: unreadCount > 0 ? 'glow-pulse 2s ease-in-out infinite' : undefined,
           cursor: 'grab',
           display: 'flex',
           alignItems: 'center',
@@ -97,7 +114,9 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
           outline: 'none',
           position: 'relative',
         }}
-        title="Hermes - Clique para conversar, arraste para mover"
+        title={unreadCount > 0
+          ? `Hermes - ${unreadCount} mensagem${unreadCount > 1 ? 'ns' : ''} nova${unreadCount > 1 ? 's' : ''}! Clique para ver`
+          : "Hermes - Clique para conversar, arraste para mover"}
       >
         <span
           style={{
@@ -128,7 +147,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              animation: 'pulse-badge 2s ease-in-out infinite',
+              animation: 'bounce-badge 0.4s ease-out, pulse-badge 2s ease-in-out 0.4s infinite',
               padding: '0 4px',
             }}
           >
