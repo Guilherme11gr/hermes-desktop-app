@@ -3,6 +3,7 @@ import { ChatMessages } from '../ChatMessages';
 import { ChatInput } from '../ChatInput';
 import { Message } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const DRAG_THRESHOLD = 5;
 
@@ -82,7 +83,6 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     if (distance > DRAG_THRESHOLD) {
       isHeaderPressingRef.current = false;
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().startDragging();
       } catch {
         // Not in Tauri environment
