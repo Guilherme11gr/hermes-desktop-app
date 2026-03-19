@@ -171,7 +171,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
       style={{
         width: '100%',
         height: '100%',
-        borderRadius: 16,
+        borderRadius: 12,
         background: bgColor,
         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.1)',
         display: 'flex',
@@ -186,7 +186,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
+          padding: '5px 10px',
           borderBottom: `1px solid ${borderColor}`,
           background: headerBg,
           cursor: 'grab',
@@ -194,8 +194,8 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 14 }}>(◕‿◕)</span>
-          <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>
+          <span style={{ fontSize: 12 }}>(◕‿◕)</span>
+          <span style={{ fontWeight: 600, color: textColor, fontSize: 11 }}>
             Hermes
           </span>
         </div>
@@ -206,9 +206,9 @@ export const FloatChat: React.FC<FloatChatProps> = ({
               handleOpenMainWindow();
             }}
             style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
+              width: 20,
+              height: 20,
+              borderRadius: 5,
               border: 'none',
               background: btnBg,
               cursor: 'pointer',
@@ -229,9 +229,9 @@ export const FloatChat: React.FC<FloatChatProps> = ({
               onCollapse();
             }}
             style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
+              width: 20,
+              height: 20,
+              borderRadius: 5,
               border: 'none',
               background: btnBg,
               cursor: 'pointer',
@@ -250,9 +250,10 @@ export const FloatChat: React.FC<FloatChatProps> = ({
 
       <div
         ref={scrollAreaRef}
-        style={{ flex: 1, overflow: 'auto', padding: '6px 10px', position: 'relative' }}
+        style={{ flex: 1, overflow: 'auto', padding: '4px 8px', position: 'relative' }}
       >
         <ChatMessages
+          compact
           messages={messages}
           isLoading={isLoading}
           isStreaming={isStreaming}
@@ -278,7 +279,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         )}
       </div>
 
-      <div style={{ padding: '6px 8px', borderTop: `1px solid ${borderColor}` }}>
+      <div style={{ padding: '4px 6px', borderTop: `1px solid ${borderColor}` }}>
         <ChatInput
           onSendMessage={onSendMessage}
           onCancel={onCancel}

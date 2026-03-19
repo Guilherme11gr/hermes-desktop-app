@@ -88,6 +88,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [input]);
 
+  // Force resize on mount + auto-resize fix
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const t = setTimeout(() => {
+        textarea.style.height = 'auto';
+        const scrollHeight = textarea.scrollHeight;
+        const lineHeight = 24;
+        const maxHeight = lineHeight * maxRows + 24;
+        textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+        textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
       onSendMessage(input);

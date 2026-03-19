@@ -31,8 +31,8 @@ async fn open_float_window(app: tauri::AppHandle) -> Result<(), String> {
         WebviewUrl::App("index.html?mode=float".into())
     )
     .title("Hermes Float")
-    .inner_size(60.0, 60.0)
-    .min_inner_size(60.0, 60.0)
+    .inner_size(76.0, 76.0)
+    .min_inner_size(76.0, 76.0)
     .max_inner_size(500.0, 600.0)
     .decorations(false)
     .transparent(true)
@@ -114,7 +114,7 @@ async fn resize_float_window(app: tauri::AppHandle, expanded: bool) -> Result<()
             float_window.set_resizable(true).map_err(|e| e.to_string())?;
         } else {
             float_window.set_resizable(false).map_err(|e| e.to_string())?;
-            float_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 60, height: 60 })).map_err(|e| e.to_string())?;
+            float_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 76, height: 76 })).map_err(|e| e.to_string())?;
         }
     }
     Ok(())
