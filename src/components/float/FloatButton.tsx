@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const ASCII_FACES = {
   idle: ['(◕‿◕)', '(◠‿◠)', '(◕ᴗ◕)'],
@@ -18,6 +18,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   const [face, setFace] = useState('(◕‿◕)');
   const divRef = useRef<HTMLDivElement>(null);
   const onExpandRef = useRef(onExpand);
+  const didDragRef = useRef(false);
   onExpandRef.current = onExpand;
 
   useEffect(() => {
@@ -33,43 +34,44 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     const el = divRef.current;
     if (!el) return;
 
-    const onMouseDown = async (e: MouseEvent) => {
-      if (e.button !== 0) return;
+    const onMouseDown = async () => {
+      didDragRef.current = false;
 
-      const startClientX = e.clientX;
-      const startClientY = e.clientY;
-      let moved = false;
-
-      let winX = 0, winY = 0;
+      // Record position before drag
+      let posBefore = { x: 0, y: 0 };
       try {
-        const pos = await getCurrentWindow().innerPosition();
-        winX = pos.x;
-        winY = pos.y;
+        posBefore = await getCurrentWindow().outerPosition();
       } catch { return; }
 
-      const onMouseMove = async (ev: MouseEvent) => {
-        const dx = ev.clientX - startClientX;
-        const dy = ev.clientY - startClientY;
-        if (!moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) moved = true;
-        if (moved) {
-          try {
-            await getCurrentWindow().setPosition(new PhysicalPosition(winX + dx, winY + dy));
-          } catch {}
+      // Start OS-level drag (smooth!)
+      try {
+        await getCurrentWindow().startDragging();
+      } catch {}
+
+      // After drag completes, check if window moved
+      try {
+        const posAfter = await getCurrentWindow().outerPosition();
+        if (posAfter.x !== posBefore.x || posAfter.y !== posBefore.y) {
+          didDragRef.current = true;
         }
-      };
+      } catch {}
+    };
 
-      const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        if (!moved) onExpandRef.current();
-      };
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+    // Native click: only expand if we didn't drag
+    const onClick = () => {
+      if (!didDragRef.current) {
+        onExpandRef.current();
+      }
+      didDragRef.current = false;
     };
 
     el.addEventListener('mousedown', onMouseDown);
-    return () => el.removeEventListener('mousedown', onMouseDown);
+    el.addEventListener('click', onClick);
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown);
+      el.removeEventListener('click', onClick);
+    };
   }, []);
 
   return (
@@ -81,6 +83,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
         height: 60,
         borderRadius: '50%',
         background: 'rgba(99, 102, 241, 0.95)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
         cursor: 'grab',
         display: 'flex',
         alignItems: 'center',
@@ -88,12 +91,14 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
         userSelect: 'none',
         outline: 'none',
       }}
+      title="Hermes - Clique para conversar, arraste para mover"
     >
       <span
         style={{
           fontSize: 20,
           fontFamily: 'monospace',
           color: 'white',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
           pointerEvents: 'none',
         }}
       >
