@@ -5,6 +5,7 @@ type AvatarState = 'idle' | 'thinking' | 'streaming' | 'error' | 'happy' | 'conf
 interface HermesMiniAvatarProps {
   state?: AvatarState;
   className?: string;
+  showStatus?: boolean; // Show random status message below avatar
 }
 
 // ===========================================
@@ -39,6 +40,16 @@ const KAOMOJI: Record<AvatarState, { frames: string[]; speed: number }> = {
       '(◕‿◕)',
       '(◠‿◠✿)',  // flower moment
       '(◕‿◕)',
+      '(◕‿◕)',
+      '(・ω・)',  // cat face
+      '(◕‿◕)',
+      '(◕‿◕)',
+      '(◡‿◡)',   // soft smile
+      '(◕‿◕)',
+      // Easter eggs (raros)
+      '( ˘ω˘ )',  // sleepy
+      '(｡◕‿◕｡)',  // extra cute
+      '٩(◕‿◕)۶',  // yay arms
     ],
     speed: 1500, // 1.5s - nice and chill
   },
@@ -73,6 +84,15 @@ const KAOMOJI: Record<AvatarState, { frames: string[]; speed: number }> = {
       '(◔_◔)',
       '(・ε・)',  // hmm interesting
       '(◔_◔)',
+      '(・_・;)',  // nervous
+      '(◔_◔)',
+      '(￣～￣)',  // sleepy
+      '(◔_◔)',
+      // Easter eggs
+      '( ͡° ͜ʖ ͡°)',  // lenny
+      '(╭ರ_⊙)',    // suspicious
+      '(꒪꒳꒪)',    // really?
+      '(≖_≖ )',    // judging
     ],
     speed: 1000, // 1s - thoughtful pace
   },
@@ -108,6 +128,15 @@ const KAOMOJI: Record<AvatarState, { frames: string[]; speed: number }> = {
       'ヽ(★‿★)ノ',  // arms up!
       '(★‿★)',
       '(✧▽✧)',
+      '(★‿★)',
+      '(✧≧◡≦✧)',  // extra sparkly
+      '(★‿★)',
+      // Easter eggs
+      '(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧',  // magic sparkles
+      'ヽ(>∀<☆)ノ',     // party
+      '(づ￣ ³￣)づ',    // hug
+      '(ღ˘⌣˘ღ)',       // love
+      '٩(๑>◡<๑)۶',     // super happy
     ],
     speed: 800, // 800ms - lively but chill
   },
@@ -141,6 +170,12 @@ const KAOMOJI: Record<AvatarState, { frames: string[]; speed: number }> = {
       '(°□°)',
       '(°□° )',  // leaning
       '(°□°)',
+      // Easter eggs
+      '(╯°□°)╯︵ ┻━┻',  // table flip!
+      '┻━┻ ︵ ヽ(°□°)ノ)',  // flipped table
+      '(ノಠ益ಠ)ノ彡┻━┻',  // angry flip
+      '(ಥ﹏ಥ)',  // crying
+      '(ノ_<。)',  // sob
     ],
     speed: 900, // 900ms - confused wobble
   },
@@ -199,6 +234,8 @@ const STATUS_MESSAGES: Record<AvatarState, string[]> = {
     'pronto',
     'aguardando',
     'à disposição',
+    'no aguardo',
+    'ouvindo...',
   ],
   thinking: [
     'pensando...',
@@ -216,6 +253,23 @@ const STATUS_MESSAGES: Record<AvatarState, string[]> = {
     'fermentando ideias...',
     'moendo neurônios...',
     'botando a manteiga na torrada...',
+    'chamando os ancestrais...',
+    'sacrificando bugs...',
+    'invocando o Stack Overflow...',
+    'pensando em Cafézinho...',
+    'filosofando com o universo...',
+    'conversando com a IA interior...',
+    'debugando a realidade...',
+    'hacking the mainframe...',
+    'consultando as estrelas...',
+    'meditando em clone...',
+    'processando em paralelo...',
+    'orquestrando sinapses...',
+    'calibrando os transformers...',
+    // Easter eggs (raros - só aparecem às vezes)
+    '🤫 shh... segredo...',
+    '☕ precisava de café...',
+    '🎵 hummm de thinking...',
   ],
   streaming: [
     'respondendo...',
@@ -233,6 +287,21 @@ const STATUS_MESSAGES: Record<AvatarState, string[]> = {
     'cozinhando a resposta...',
     'servindo conhecimento...',
     'regando o jardim das ideias...',
+    'espalhando bits...',
+    'costurando tokens...',
+    'embaralhando embeddings...',
+    'navegando no espaço latente...',
+    'decodificando a matrix...',
+    'traduzindo do neuronês...',
+    'sincronizando com o cosmos...',
+    'canalizando a inteligência...',
+    'vazando sabedoria...',
+    'derramando tokens...',
+    // Easter eggs
+    '⚡ modo turbo ativado!',
+    '🔥 tá quente demais!',
+    '✨ sparkle sparkle!',
+    '🚀 zoom zoom!',
   ],
   error: [
     'eita!',
@@ -244,18 +313,43 @@ const STATUS_MESSAGES: Record<AvatarState, string[]> = {
     'não foi dessa vez...',
     'vish, peraí...',
     'recarrega que eu viro...',
+    'barril!',
+    'xabu!',
+    'ferrou...',
+    'eita preula!',
+    'vixi maria!',
+    // Easter eggs
+    '🎮 perdeu uma vida!',
+    '💥 BOOM!',
+    '🔥 tá pegando fogo!',
+    '🤖 beedoop boop erro!',
   ],
   happy: [
     'show!',
     'massa!',
     'mandou bem!',
     'é isso aí!',
+    'arrasou!',
+    'perfeito!',
+    'top demais!',
+    'sinistro!',
+    // Easter eggs
+    '🎉 confetti!',
+    '🏆 venceu!',
+    '⭐ 5 estrelas!',
   ],
   confused: [
     'hmm...',
     'estranho...',
     'não entendi...',
     'como assim?',
+    'ué...',
+    'quê?',
+    'blz?',
+    // Easter eggs
+    '🤔 hmmmm...',
+    '👀 olha só...',
+    '🦆 quack?',
   ],
 };
 
@@ -283,6 +377,13 @@ export const useRandomStatus = (state: AvatarState, isActive: boolean): string =
   }, [state, isActive]);
 
   return message;
+};
+
+// Simple text-only component for inline status
+export const RandomStatusText: React.FC<{ state: AvatarState }> = ({ state }) => {
+  const isActive = state === 'thinking' || state === 'streaming';
+  const message = useRandomStatus(state, isActive);
+  return <>{message}</>;
 };
 
 export const HermesMiniAvatar: React.FC<HermesMiniAvatarProps> = ({
