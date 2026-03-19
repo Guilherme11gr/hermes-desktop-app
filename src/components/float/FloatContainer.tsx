@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FloatButton } from './FloatButton';
 import { FloatChat } from './FloatChat';
 import { useChat } from '../../hooks/useChat';
@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 export const FloatContainer: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const justExpandedRef = useRef(false);
 
   const {
     messages,
@@ -21,34 +22,37 @@ export const FloatContainer: React.FC = () => {
 
   const { isDarkMode } = useTheme();
 
-  const resizeWindow = async (expanded: boolean) => {
+  const resizeWindow = useCallback(async (expanded: boolean) => {
     try {
-      console.log('[FloatContainer] resizeWindow chamado, expanded:', expanded);
-      const result = await invoke('resize_float_window', { expanded });
-      console.log('[FloatContainer] resizeWindow resultado:', result);
+      await invoke('resize_float_window', { expanded });
     } catch (e) {
       console.error('[FloatContainer] Erro ao redimensionar:', e);
     }
-  };
+  }, []);
 
-  const expand = async () => {
-    console.log('[FloatContainer] expand() chamado');
+  const expand = useCallback(async () => {
+    if (justExpandedRef.current) return;
+    justExpandedRef.current = true;
     setIsExpanded(true);
+    // Small delay to let OS finish processing any pending drag messages
+    await new Promise(r => setTimeout(r, 50));
     await resizeWindow(true);
-    console.log('[FloatContainer] resizeWindow(true) concluído');
-  };
+    // Reset flag after a moment
+    setTimeout(() => { justExpandedRef.current = false; }, 500);
+  }, [resizeWindow]);
 
-  const collapse = async () => {
-    console.log('[FloatContainer] collapse() chamado');
+  const collapse = useCallback(async () => {
+    if (justExpandedRef.current) return;
     setIsExpanded(false);
     await resizeWindow(false);
-    console.log('[FloatContainer] resizeWindow(false) concluído');
-  };
+  }, [resizeWindow]);
 
+  // Outside click to collapse — but NOT right after expanding
   useEffect(() => {
     if (!isExpanded) return;
 
     const handleClickOutside = (e: MouseEvent) => {
+      if (justExpandedRef.current) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         collapse();
       }
@@ -56,14 +60,15 @@ export const FloatContainer: React.FC = () => {
 
     const timeout = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
+    }, 300);
 
     return () => {
       clearTimeout(timeout);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isExpanded]);
+  }, [isExpanded, collapse]);
 
+  // ESC to collapse
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isExpanded) {
@@ -72,7 +77,7 @@ export const FloatContainer: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded]);
+  }, [isExpanded, collapse]);
 
   if (!isExpanded) {
     return (
