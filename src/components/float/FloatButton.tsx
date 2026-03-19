@@ -98,8 +98,8 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
         ref={divRef}
         tabIndex={-1}
         style={{
-          width: 60,
-          height: 60,
+          width: 66,
+          height: 66,
           borderRadius: '50%',
           background: 'rgba(99, 102, 241, 0.95)',
           boxShadow: unreadCount > 0
@@ -111,6 +111,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           userSelect: 'none',
+          overflow: 'visible',
           outline: 'none',
           position: 'relative',
         }}
@@ -120,7 +121,7 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
       >
         <span
           style={{
-            fontSize: 20,
+            fontSize: 19,
             fontFamily: 'monospace',
             color: 'white',
             textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
@@ -133,8 +134,8 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
           <div
             style={{
               position: 'absolute',
-              top: -6,
-              right: -6,
+              top: 2,
+              right: 2,
               minWidth: 20,
               height: 20,
               background: '#ef4444',

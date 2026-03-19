@@ -49,7 +49,7 @@ const App: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         background: 'transparent',
-        overflow: 'hidden',
+        overflow: 'visible',
       }}>
         <FloatContainer />
       </div>
