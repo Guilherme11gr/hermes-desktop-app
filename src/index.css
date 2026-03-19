@@ -6,6 +6,11 @@
 html, body, #root {
   overflow: hidden !important;
   background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Kill any outline/border on focused elements in float mode */

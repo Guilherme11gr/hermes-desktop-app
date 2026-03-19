@@ -36,6 +36,7 @@ async fn open_float_window(app: tauri::AppHandle) -> Result<(), String> {
     .max_inner_size(500.0, 600.0)
     .decorations(false)
     .transparent(true)
+    .shadow(false)
     .always_on_top(true)
     .visible(true)
     .resizable(false)
