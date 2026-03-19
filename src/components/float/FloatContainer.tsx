@@ -10,7 +10,7 @@ export const FloatContainer: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const ignoreCollapseRef = useRef(false);
-  const prevMessagesLengthRef = useRef(messages.length);
+  const prevMessagesLengthRef = useRef(0);
 
   const {
     messages,
