@@ -3,14 +3,19 @@ import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SessionSidebar } from './SessionSidebar';
+import { SessionInfo } from './SessionInfo';
 import { Message, Conversation } from '../types';
 import { generateId, getCurrentTimestamp } from '../utils';
 import { config } from '../config';
+import { useFloatWindow } from '../hooks/useFloatWindow';
 
 const STORAGE_KEY = 'hermes-chat-conversations';
 const CURRENT_SESSION_KEY = 'hermes-current-session';
 
 export const ChatContainer: React.FC = () => {
+  // Hook para controlar janela float
+  const { toggleFloat, isLoading: isFloatLoading } = useFloatWindow();
+  
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -32,10 +37,19 @@ export const ChatContainer: React.FC = () => {
   const [currentStreamText, setCurrentStreamText] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hermes-theme');
+      if (saved) return saved === 'dark';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
   });
+  
+  // Session info state - REAL DATA ONLY
+  const [isConnected, setIsConnected] = useState(false);
+  const [usedTokens, setUsedTokens] = useState(0);
+  
+  // Track cumulative tokens from API responses
+  const cumulativeTokensRef = useRef(0);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,6 +89,25 @@ export const ChatContainer: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Health check for connection status
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(`${config.apiUrl}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(3000),
+        });
+        setIsConnected(response.ok);
+      } catch {
+        setIsConnected(false);
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,13 +115,17 @@ export const ChatContainer: React.FC = () => {
         e.preventDefault();
         handleNewConversation();
       }
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        toggleFloat();
+      }
       if (e.key === 'Escape' && isStreaming) {
         handleCancel();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isStreaming]);
+  }, [isStreaming, toggleFloat]);
 
   const saveCurrentConversation = useCallback((msgs: Message[]) => {
     setConversations(prev => {
@@ -145,6 +182,7 @@ export const ChatContainer: React.FC = () => {
       const decoder = new TextDecoder();
       let streamText = '';
       let buffer = '';  // Buffer para chunks incompletos
+      let lastUsage = null;  // Capturar usage do último chunk
 
       if (reader) {
         while (true) {
@@ -171,12 +209,22 @@ export const ChatContainer: React.FC = () => {
                   streamText += content;
                   setCurrentStreamText(streamText);
                 }
+                // Capturar usage do último chunk (vem junto com finish_reason)
+                if (parsed.usage) {
+                  lastUsage = parsed.usage;
+                }
               } catch {
                 // Ignore parsing errors
               }
             }
           }
         }
+      }
+
+      // Atualizar tokens acumulados com dados REAIS da API
+      if (lastUsage) {
+        cumulativeTokensRef.current += lastUsage.total_tokens || 0;
+        setUsedTokens(cumulativeTokensRef.current);
       }
 
       const assistantMessage: Message = {
@@ -227,6 +275,9 @@ export const ChatContainer: React.FC = () => {
     setIsLoading(false);
     setIsStreaming(false);
     setCurrentStreamText('');
+    // Reset cumulative tokens for new session
+    cumulativeTokensRef.current = 0;
+    setUsedTokens(0);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -241,7 +292,11 @@ export const ChatContainer: React.FC = () => {
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    setIsDarkMode(prev => {
+      const newValue = !prev;
+      localStorage.setItem('hermes-theme', newValue ? 'dark' : 'light');
+      return newValue;
+    });
   };
 
   return (
@@ -265,6 +320,16 @@ export const ChatContainer: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={toggleFloat}
+              disabled={isFloatLoading}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              title="Abrir janela flutuante (Ctrl+Shift+F)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               title={isDarkMode ? 'Modo claro' : 'Modo escuro'}
@@ -281,6 +346,12 @@ export const ChatContainer: React.FC = () => {
             </button>
           </div>
         </header>
+
+        {/* Session Info Bar */}
+        <SessionInfo
+          usedTokens={usedTokens}
+          isConnected={isConnected}
+        />
 
         <div className="flex-1 overflow-hidden">
           <ChatMessages

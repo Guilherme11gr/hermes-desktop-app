@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Message } from '../types';
-import { HermesMiniAvatar } from './HermesAvatar';
+import { HermesMiniAvatar, RandomStatusText } from './HermesAvatar';
+import { SimpleMarkdown, MarkdownRenderer } from './MarkdownRenderer';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -9,16 +10,6 @@ interface ChatMessagesProps {
   currentStreamText: string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
-
-// Simple markdown parser for basic formatting
-const parseMarkdown = (text: string): string => {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-sm font-mono">$1</code>')
-    .replace(/```([\s\S]*?)```/g, '<pre class="p-3 bg-gray-800 text-gray-100 rounded-lg overflow-x-auto my-2"><code>$1</code></pre>')
-    .replace(/\n/g, '<br />');
-};
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
   messages,
@@ -51,7 +42,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       <div className="max-w-3xl mx-auto space-y-6">
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center animate-float">
               <svg
                 className="w-8 h-8 text-white"
                 fill="none"
@@ -67,11 +58,31 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Bem-vindo ao Hermes Chat
+              Fala aí! 👋
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md">
-              Comece uma conversa digitando sua mensagem abaixo.
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mb-6">
+              Como posso te ajudar hoje?
             </p>
+            {/* Quick suggestions */}
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+              {[
+                'Me explica async/await',
+                'Gera um código Python',
+                'Review esse código',
+                'Dicas de TypeScript',
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  onClick={() => {
+                    // This would need to be passed as a prop to work
+                    // For now just visual
+                  }}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -110,8 +121,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     ? 'bg-blue-600 text-white rounded-br-md'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
                 }`}
-                dangerouslySetInnerHTML={{ __html: parseMarkdown(message.content) }}
-              />
+              >
+                {message.role === 'user' ? (
+                  <SimpleMarkdown content={message.content} />
+                ) : (
+                  <MarkdownRenderer content={message.content} />
+                )}
+              </div>
 
               {/* Copy button for assistant messages */}
               {message.role === 'assistant' && (
@@ -135,13 +151,22 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           <div className="flex justify-start animate-fadeIn">
             <div className="max-w-[80%] sm:max-w-[75%] lg:max-w-[70%]">
               <div className="flex items-center gap-2 mb-1">
-                <div className="flex-shrink-0">
-                  <HermesMiniAvatar state={currentStreamText ? 'streaming' : 'thinking'} />
-                </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Hermes</span>
-                <span className="text-xs text-green-500 animate-pulse">
-                  {!currentStreamText ? 'pensando...' : 'respondendo...'}
-                </span>
+                {(() => {
+                  const avatarState = currentStreamText ? 'streaming' : 'thinking';
+                  const colorClass = avatarState === 'streaming' 
+                    ? 'text-green-400 drop-shadow-[0_0_6px_rgba(74,222,128,0.4)]'
+                    : 'text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.3)]';
+                  return (
+                    <>
+                      <div className="flex-shrink-0">
+                        <HermesMiniAvatar state={avatarState} />
+                      </div>
+                      <span className={`text-xs font-mono animate-pulse transition-colors duration-300 ${colorClass}`}>
+                        <RandomStatusText state={avatarState} />
+                      </span>
+                    </>
+                  );
+                })()}
               </div>
               {/* Show loading dots while waiting for first chunk, then show text */}
               {!currentStreamText ? (
@@ -154,10 +179,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 </div>
               ) : (
                 <div className="px-4 py-3 rounded-2xl text-sm leading-relaxed break-words bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md">
-                  <span 
-                    className="streaming-text"
-                    dangerouslySetInnerHTML={{ __html: parseMarkdown(currentStreamText) }} 
-                  />
+                  <span className="streaming-text">
+                    <SimpleMarkdown content={currentStreamText} />
+                  </span>
                   <span className="streaming-cursor" aria-hidden="true"></span>
                 </div>
               )}
@@ -173,8 +197,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 <div className="flex-shrink-0">
                   <HermesMiniAvatar state="thinking" />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Hermes</span>
-                <span className="text-xs text-blue-400 animate-pulse">pensando...</span>
+                <span className="text-xs font-mono animate-pulse text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.3)]">
+                  <RandomStatusText state="thinking" />
+                </span>
               </div>
               <div className="px-4 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 rounded-bl-md">
                 <div className="flex items-center gap-1 h-5">

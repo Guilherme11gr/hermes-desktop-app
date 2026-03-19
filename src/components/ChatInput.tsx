@@ -14,8 +14,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isStreaming,
 }) => {
   const [input, setInput] = useState('');
+  const [showEasterEgg, setShowEasterEgg] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxRows = 5;
+  const charCount = input.length;
+  const maxChars = 4000;
+
+  // Easter egg detector
+  useEffect(() => {
+    const easterEggs = ['voce eh lindo', 'te amo', 'obrigado', 'thanks', 'bom dia', 'boa noite'];
+    const found = easterEggs.some(egg => input.toLowerCase().includes(egg));
+    if (found && !showEasterEgg) {
+      setShowEasterEgg(true);
+      setTimeout(() => setShowEasterEgg(false), 3000);
+    }
+  }, [input, showEasterEgg]);
 
   // Auto-focus on mount
   useEffect(() => {
@@ -48,9 +61,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter = send (without shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    }
+    // Escape = cancel streaming
+    if (e.key === 'Escape' && isStreaming) {
+      e.preventDefault();
+      onCancel();
     }
   };
 
@@ -114,20 +133,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         {/* Helper text */}
         <div className="flex items-center justify-between mt-2 px-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
-              Enter
-            </kbd>{' '}
-            para enviar ·{' '}
-            <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
-              Shift + Enter
-            </kbd>{' '}
-            para nova linha
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
+                Enter
+              </kbd>{' '}
+              para enviar ·{' '}
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
+                Shift + Enter
+              </kbd>{' '}
+              nova linha
+              {isStreaming && (
+                <>
+                  {' · '}
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
+                    Esc
+                  </kbd>{' '}
+                  parar
+                </>
+              )}
+            </p>
+            {/* Character counter */}
+            {charCount > 100 && (
+              <span className={`text-xs font-mono ${
+                charCount > maxChars * 0.9 
+                  ? 'text-red-500' 
+                  : charCount > maxChars * 0.7 
+                    ? 'text-yellow-500' 
+                    : 'text-gray-400'
+              }`}>
+                {charCount}/{maxChars}
+              </span>
+            )}
+            {/* Easter egg */}
+            {showEasterEgg && (
+              <span className="text-xs rainbow-text animate-pulse">
+                (◕‿◕)♡
+              </span>
+            )}
+          </div>
           {isStreaming && (
             <button
               onClick={onCancel}
-              className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1"
+              className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1 transition-colors"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
