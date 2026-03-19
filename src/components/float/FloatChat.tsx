@@ -3,9 +3,7 @@ import { ChatMessages } from '../ChatMessages';
 import { ChatInput } from '../ChatInput';
 import { Message } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
-
-const DRAG_THRESHOLD = 5;
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface FloatChatProps {
   messages: Message[];
@@ -37,9 +35,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     return false;
   });
 
-  const headerDragStartMouse = useRef({ x: 0, y: 0 });
-  const headerDragStartWindow = useRef({ x: 0, y: 0 });
-  const isHeaderDraggingRef = useRef(false);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -68,47 +64,26 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const handleHeaderMouseDown = async (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    
-    headerDragStartMouse.current = { x: e.clientX, y: e.clientY };
-    
-    try {
-      const window = getCurrentWindow();
-      const pos = await window.outerPosition();
-      headerDragStartWindow.current = { x: pos.x, y: pos.y };
-    } catch {
-      return;
-    }
-    
-    isHeaderDraggingRef.current = false;
+  // Native DOM drag for header — same approach as FloatButton
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
 
-    const handleMouseMove = async (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - headerDragStartMouse.current.x;
-      const dy = moveEvent.clientY - headerDragStartMouse.current.y;
-      
-      if (!isHeaderDraggingRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
-        isHeaderDraggingRef.current = true;
-      }
-      
-      if (isHeaderDraggingRef.current) {
-        try {
-          const newX = headerDragStartWindow.current.x + dx;
-          const newY = headerDragStartWindow.current.y + dy;
-          await getCurrentWindow().setPosition(new PhysicalPosition(newX, newY));
-        } catch {}
+    const onMouseDown = (e: MouseEvent) => {
+      // Don't drag if clicking buttons
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) return;
+
+      try {
+        getCurrentWindow().startDragging();
+      } catch {
+        // Not in Tauri
       }
     };
 
-    const handleMouseUp = () => {
-      isHeaderDraggingRef.current = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
+    el.addEventListener('mousedown', onMouseDown);
+    return () => el.removeEventListener('mousedown', onMouseDown);
+  }, []);
 
   const handleOpenMainWindow = async () => {
     try {
@@ -119,7 +94,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
     }
   };
 
-  const bgColor = isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)';
+  const bgColor = isDarkMode ? '#111827' : '#ffffff';
   const borderColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
   const headerBg = isDarkMode 
     ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%)'
@@ -141,8 +116,9 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         overflow: 'hidden',
       }}
     >
+      {/* Header — native drag via addEventListener */}
       <div
-        onMouseDown={handleHeaderMouseDown}
+        ref={headerRef}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -162,7 +138,6 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
-            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               handleOpenMainWindow();
@@ -186,7 +161,6 @@ export const FloatChat: React.FC<FloatChatProps> = ({
             </svg>
           </button>
           <button
-            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onCollapse();

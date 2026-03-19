@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const ASCII_FACES = {
   idle: ['(◕‿◕)', '(◠‿◠)', '(◕ᴗ◕)'],
   thinking: ['(✧ω✧)', '(・_・)', '(•ᴗ•)', '(◠ω◠)'],
-  happy: ['(◕‿◕)', '(≧◡≦)', '(⌒‿⌒)']
 };
-
-const DRAG_THRESHOLD = 5;
 
 interface FloatButtonProps {
   isThinking?: boolean;
@@ -19,104 +16,80 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   onExpand 
 }) => {
   const [face, setFace] = useState('(◕‿◕)');
-  const [isDragging, setIsDragging] = useState(false);
-  
-  const dragStartMouse = useRef({ x: 0, y: 0 });
-  const dragStartWindow = useRef({ x: 0, y: 0 });
+  const divRef = useRef<HTMLDivElement>(null);
   const hasDraggedRef = useRef(false);
-  const isDraggingRef = useRef(false);
-  const faceIntervalRef = useRef<number | null>(null);
 
+  // Face animation
   useEffect(() => {
     const faces = isThinking ? ASCII_FACES.thinking : ASCII_FACES.idle;
-    
-    faceIntervalRef.current = window.setInterval(() => {
-      const randomFace = faces[Math.floor(Math.random() * faces.length)];
-      setFace(randomFace);
+    const interval = window.setInterval(() => {
+      setFace(faces[Math.floor(Math.random() * faces.length)]);
     }, 2000);
-
     setFace(faces[0]);
-
-    return () => {
-      if (faceIntervalRef.current) {
-        clearInterval(faceIntervalRef.current);
-      }
-    };
+    return () => clearInterval(interval);
   }, [isThinking]);
 
-  const handleMouseDown = async (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    
-    dragStartMouse.current = { x: e.clientX, y: e.clientY };
-    
-    try {
-      const window = getCurrentWindow();
-      const pos = await window.outerPosition();
-      dragStartWindow.current = { x: pos.x, y: pos.y };
-    } catch {
-      return;
-    }
-    
-    hasDraggedRef.current = false;
-    isDraggingRef.current = false;
+  // Native DOM drag handler — NOT React events
+  useEffect(() => {
+    const el = divRef.current;
+    if (!el) return;
 
-    const handleMouseMove = async (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - dragStartMouse.current.x;
-      const dy = moveEvent.clientY - dragStartMouse.current.y;
-      
-      if (!hasDraggedRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
-        hasDraggedRef.current = true;
-        isDraggingRef.current = true;
-        setIsDragging(true);
-      }
-      
-      if (isDraggingRef.current) {
-        try {
-          const newX = dragStartWindow.current.x + dx;
-          const newY = dragStartWindow.current.y + dy;
-          await getCurrentWindow().setPosition(new PhysicalPosition(newX, newY));
-        } catch {}
+    const onMouseDown = (_e: MouseEvent) => {
+      hasDraggedRef.current = false;
+
+      // Record position BEFORE starting drag
+      let moved = false;
+
+      const onMouseMove = () => {
+        if (!moved) {
+          moved = true;
+          hasDraggedRef.current = true;
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+
+      // Call startDragging synchronously — this hands control to the OS
+      try {
+        getCurrentWindow().startDragging();
+      } catch {
+        // Not in Tauri
       }
     };
 
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+    el.addEventListener('mousedown', onMouseDown);
+    return () => el.removeEventListener('mousedown', onMouseDown);
+  }, []);
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (hasDraggedRef.current) {
       hasDraggedRef.current = false;
       return;
     }
-    
     onExpand();
-  };
+  }, [onExpand]);
 
   return (
     <div
-      onMouseDown={handleMouseDown}
+      ref={divRef}
       onClick={handleClick}
       style={{
         width: 60,
         height: 60,
         borderRadius: '50%',
         background: 'rgba(99, 102, 241, 0.95)',
-        backdropFilter: 'blur(10px)',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1)',
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: 'grab',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',
-        transition: isDragging ? 'none' : 'transform 0.2s, box-shadow 0.2s',
-        transform: isDragging ? 'scale(1.1)' : 'scale(1)',
       }}
       title="Hermes - Clique para conversar, arraste para mover"
     >
