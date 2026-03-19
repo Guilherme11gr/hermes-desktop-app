@@ -20,7 +20,7 @@ interface FloatChatProps {
 const FLOAT_CHAT_STYLES = `
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 72px;
+  bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
   width: 32px;
@@ -186,28 +186,28 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 14px',
+          padding: '8px 12px',
           borderBottom: `1px solid ${borderColor}`,
           background: headerBg,
           cursor: 'grab',
           userSelect: 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>(◕‿◕)</span>
-          <span style={{ fontWeight: 600, color: textColor, fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 14 }}>(◕‿◕)</span>
+          <span style={{ fontWeight: 600, color: textColor, fontSize: 12 }}>
             Hermes
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleOpenMainWindow();
             }}
             style={{
-              width: 26,
-              height: 26,
+              width: 24,
+              height: 24,
               borderRadius: 6,
               border: 'none',
               background: btnBg,
@@ -219,7 +219,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
             }}
             title="Abrir em tela cheia"
           >
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
             </svg>
           </button>
@@ -229,8 +229,8 @@ export const FloatChat: React.FC<FloatChatProps> = ({
               onCollapse();
             }}
             style={{
-              width: 26,
-              height: 26,
+              width: 24,
+              height: 24,
               borderRadius: 6,
               border: 'none',
               background: btnBg,
@@ -250,7 +250,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
 
       <div
         ref={scrollAreaRef}
-        style={{ flex: 1, overflow: 'auto', padding: '8px 12px', position: 'relative' }}
+        style={{ flex: 1, overflow: 'auto', padding: '6px 10px', position: 'relative' }}
       >
         <ChatMessages
           messages={messages}
@@ -278,7 +278,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
         )}
       </div>
 
-      <div style={{ padding: 8, borderTop: `1px solid ${borderColor}` }}>
+      <div style={{ padding: '6px 8px', borderTop: `1px solid ${borderColor}` }}>
         <ChatInput
           onSendMessage={onSendMessage}
           onCancel={onCancel}
@@ -286,6 +286,7 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           isStreaming={isStreaming}
           autoFocus
           onEscape={onCollapse}
+          compact
         />
       </div>
     </div>

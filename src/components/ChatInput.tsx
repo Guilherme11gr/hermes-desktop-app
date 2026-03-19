@@ -9,6 +9,8 @@ interface ChatInputProps {
   autoFocus?: boolean;
   /** Called when Escape is pressed and not streaming */
   onEscape?: () => void;
+  /** Compact mode for float chat — smaller fonts, less padding */
+  compact?: boolean;
 }
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -29,13 +31,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isStreaming,
   autoFocus = false,
   onEscape,
+  compact = false,
 }) => {
   const [input, setInput] = useState('');
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const maxRows = 5;
+  const maxRows = compact ? 4 : 5;
   const charCount = input.length;
   const maxChars = 4000;
 
@@ -114,10 +117,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const isDisabled = isLoading && !isStreaming;
 
+  const compactClass = compact ? 'text-sm' : '';
+
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="relative flex items-end gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+    <div className={`${compact ? 'bg-transparent' : 'border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-4'}`}>
+      <div className={compact ? '' : 'max-w-3xl mx-auto'}>
+        <div className={`relative flex items-end gap-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all ${compact ? 'rounded-xl' : ''}`}>
           {/* Textarea */}
           <textarea
             ref={textareaRef}
@@ -129,19 +134,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             placeholder={isDisabled ? 'Aguardando resposta...' : PLACEHOLDER_SUGGESTIONS[placeholderIdx]}
             disabled={isDisabled}
             rows={1}
-            className="flex-1 bg-transparent border-0 resize-none px-4 py-3.5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-0 min-h-[52px] max-h-[140px] scrollbar-thin"
+            className={`flex-1 bg-transparent border-0 resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-0 scrollbar-thin ${compact ? 'px-3 py-2.5 text-sm min-h-[36px] max-h-[100px]' : 'px-4 py-3.5 min-h-[52px] max-h-[140px]'}`}
           />
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1 pr-2 pb-2">
+          <div className={`flex items-center gap-1 ${compact ? 'pr-1.5 pb-1.5' : 'pr-2 pb-2'}`}>
             {/* Cancel button - shown during streaming */}
             {isStreaming && (
               <button
                 onClick={onCancel}
-                className="p-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className={`${compact ? 'p-1.5' : 'p-2'} rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors`}
                 title="Cancelar (Esc)"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={compact ? 'w-4 h-4' : 'w-5 h-5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -151,7 +156,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || isDisabled}
-              className={`p-2 rounded-xl transition-all ${
+              className={`${compact ? 'p-1.5' : 'p-2'} rounded-xl transition-all ${
                 input.trim() && !isDisabled
                   ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
                   : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
@@ -159,12 +164,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               title="Enviar mensagem (Enter)"
             >
               {isLoading && !isStreaming ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <svg className={compact ? 'w-4 h-4 animate-spin' : 'w-5 h-5 animate-spin'} fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={compact ? 'w-4 h-4' : 'w-5 h-5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               )}
@@ -172,8 +177,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
         </div>
 
-        {/* Helper text */}
-        <div className="flex items-center justify-between mt-2 px-2">
+        {/* Helper text — hidden in compact mode */}
+        {!compact && <div className="flex items-center justify-between mt-2 px-2">
           <div className="flex items-center gap-3">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400 font-mono">
@@ -225,7 +230,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               Parar geração
             </button>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

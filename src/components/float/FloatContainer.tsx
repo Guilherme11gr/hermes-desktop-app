@@ -102,7 +102,7 @@ export const FloatContainer: React.FC = () => {
 
   if (!isExpanded) {
     return (
-      <div ref={containerRef} style={{ overflow: 'visible' }}>
+      <div ref={containerRef} style={{ overflow: 'visible', padding: 8 }}>
         <FloatButton
           isThinking={isLoading || isStreaming}
           onExpand={expand}
