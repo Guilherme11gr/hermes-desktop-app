@@ -299,6 +299,18 @@ export const ChatContainer: React.FC = () => {
     });
   };
 
+  // Retry: re-send the last user message
+  const handleRetry = useCallback((content: string) => {
+    // Remove the last error message and re-send
+    setMessages(prev => {
+      const cleaned = prev.filter(m => !m.content.startsWith('Desculpe, ocorreu um erro'));
+      saveCurrentConversation(cleaned);
+      return cleaned;
+    });
+    // Use a small delay so state updates first
+    setTimeout(() => handleSendMessage(content), 50);
+  }, []);
+
   return (
     <div className={`flex h-screen w-full ${isDarkMode ? 'dark' : ''}`}>
       <SessionSidebar
@@ -360,6 +372,8 @@ export const ChatContainer: React.FC = () => {
             isStreaming={isStreaming}
             currentStreamText={currentStreamText}
             messagesEndRef={messagesEndRef}
+            onSuggestionClick={handleSendMessage}
+            onRetry={handleRetry}
           />
         </div>
 

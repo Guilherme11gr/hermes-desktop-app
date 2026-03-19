@@ -24,6 +24,13 @@ export const FloatContainer: React.FC = () => {
 
   const { isDarkMode } = useTheme();
 
+  // Retry: re-send the last user message
+  const handleRetry = useCallback((content: string) => {
+    // Don't retry if already loading
+    if (isLoading) return;
+    handleSendMessage(content);
+  }, [isLoading, handleSendMessage]);
+
   const resizeWindow = useCallback(async (expanded: boolean) => {
     try {
       await invoke('resize_float_window', { expanded });
@@ -116,6 +123,7 @@ export const FloatContainer: React.FC = () => {
         onSendMessage={handleSendMessage}
         onCancel={handleCancel}
         onCollapse={collapse}
+        onRetry={handleRetry}
       />
     </div>
   );

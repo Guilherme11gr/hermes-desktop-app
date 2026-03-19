@@ -14,6 +14,7 @@ interface FloatChatProps {
   onSendMessage: (content: string) => void;
   onCancel: () => void;
   onCollapse: () => void;
+  onRetry?: (content: string) => void;
 }
 
 const FLOAT_CHAT_STYLES = `
@@ -69,7 +70,8 @@ export const FloatChat: React.FC<FloatChatProps> = ({
   messagesEndRef,
   onSendMessage,
   onCancel,
-  onCollapse
+  onCollapse,
+  onRetry,
 }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -249,12 +251,6 @@ export const FloatChat: React.FC<FloatChatProps> = ({
       <div
         ref={scrollAreaRef}
         style={{ flex: 1, overflow: 'auto', padding: '8px 12px', position: 'relative' }}
-        onScroll={() => {
-          const el = scrollAreaRef.current;
-          if (!el) return;
-          const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-          setShowScrollBtn(!isNearBottom);
-        }}
       >
         <ChatMessages
           messages={messages}
@@ -262,6 +258,9 @@ export const FloatChat: React.FC<FloatChatProps> = ({
           isStreaming={isStreaming}
           currentStreamText={currentStreamText}
           messagesEndRef={messagesEndRef}
+          onSuggestionClick={onSendMessage}
+          onRetry={onRetry}
+          onScrollStateChange={(nearBottom) => setShowScrollBtn(!nearBottom)}
         />
 
         {showScrollBtn && (

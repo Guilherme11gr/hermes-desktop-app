@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '../types';
 import { HermesMiniAvatar, RandomStatusText } from './HermesAvatar';
 import { SimpleMarkdown, MarkdownRenderer } from './MarkdownRenderer';
@@ -9,7 +9,19 @@ interface ChatMessagesProps {
   isStreaming: boolean;
   currentStreamText: string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  onSuggestionClick?: (text: string) => void;
+  onRetry?: (messageContent: string) => void;
+  onScrollStateChange?: (isNearBottom: boolean) => void;
 }
+
+const SUGGESTIONS = [
+  { label: 'Me explica async/await', emoji: '🔄' },
+  { label: 'Gera um código Python', emoji: '🐍' },
+  { label: 'Review esse código', emoji: '👀' },
+  { label: 'Dicas de TypeScript', emoji: '💎' },
+  { label: 'Debuga esse erro', emoji: '🐛' },
+  { label: 'O que é Rust?', emoji: '🦀' },
+];
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
   messages,
@@ -17,15 +29,51 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   isStreaming,
   currentStreamText,
   messagesEndRef,
+  onSuggestionClick,
+  onRetry,
+  onScrollStateChange,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [tokenRate, setTokenRate] = useState<number | null>(null);
+  const streamStartTimeRef = useRef<number | null>(null);
+  const streamCharCountRef = useRef(0);
 
-  // Auto-scroll to bottom when messages change or streaming
+  // Track scroll position
+  const checkScrollPosition = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setIsNearBottom(nearBottom);
+    onScrollStateChange?.(nearBottom);
+  }, [onScrollStateChange]);
+
+  // Smart auto-scroll: only if near bottom
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (isNearBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, currentStreamText, messagesEndRef]);
+  }, [messages, currentStreamText, isNearBottom, messagesEndRef]);
+
+  // Track streaming rate (chars/s as a proxy for tokens/s)
+  useEffect(() => {
+    if (isStreaming && currentStreamText) {
+      if (!streamStartTimeRef.current) {
+        streamStartTimeRef.current = Date.now();
+        streamCharCountRef.current = 0;
+      }
+      streamCharCountRef.current = currentStreamText.length;
+      const elapsed = (Date.now() - streamStartTimeRef.current) / 1000;
+      if (elapsed > 0.5) {
+        // Approximate: ~4 chars per token
+        setTokenRate(Math.round((streamCharCountRef.current / 4) / elapsed));
+      }
+    } else if (!isStreaming) {
+      streamStartTimeRef.current = null;
+      streamCharCountRef.current = 0;
+      setTokenRate(null);
+    }
+  }, [isStreaming, currentStreamText]);
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -34,10 +82,15 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     });
   };
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full overflow-y-auto px-4 py-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+      className="h-full overflow-y-auto px-4 py-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent relative"
+      onScroll={checkScrollPosition}
     >
       <div className="max-w-3xl mx-auto space-y-6">
         {messages.length === 0 && !isLoading && (
@@ -63,23 +116,15 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             <p className="text-gray-500 dark:text-gray-400 max-w-md mb-6">
               Como posso te ajudar hoje?
             </p>
-            {/* Quick suggestions */}
+            {/* Quick suggestions — agora clicáveis! */}
             <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-              {[
-                'Me explica async/await',
-                'Gera um código Python',
-                'Review esse código',
-                'Dicas de TypeScript',
-              ].map((suggestion) => (
+              {SUGGESTIONS.map(({ label, emoji }) => (
                 <button
-                  key={suggestion}
-                  className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => {
-                    // This would need to be passed as a prop to work
-                    // For now just visual
-                  }}
+                  key={label}
+                  className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-700 border border-transparent transition-all duration-200 cursor-pointer"
+                  onClick={() => onSuggestionClick?.(label)}
                 >
-                  {suggestion}
+                  {emoji} {label}
                 </button>
               ))}
             </div>
@@ -119,7 +164,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 className={`px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
                   message.role === 'user'
                     ? 'bg-blue-600 text-white rounded-br-md'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
+                    : message.content.startsWith('Desculpe, ocorreu um erro')
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-bl-md border border-red-200 dark:border-red-800/50'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -129,18 +176,38 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 )}
               </div>
 
-              {/* Copy button for assistant messages */}
+              {/* Action buttons for assistant messages */}
               {message.role === 'assistant' && (
-                <button
-                  onClick={() => navigator.clipboard.writeText(message.content)}
-                  className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
-                  title="Copiar mensagem"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copiar
-                </button>
+                <div className="flex items-center gap-2 mt-1">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(message.content)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
+                    title="Copiar mensagem"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copiar
+                  </button>
+                  {/* Retry button for error messages */}
+                  {message.content.startsWith('Desculpe, ocorreu um erro') && onRetry && index > 0 && (
+                    <button
+                      onClick={() => {
+                        // Find the last user message before this error
+                        const lastUserMsg = [...messages].reverse().find(
+                          (m, i) => i > messages.length - 1 - index && m.role === 'user'
+                        );
+                        if (lastUserMsg) onRetry(lastUserMsg.content);
+                      }}
+                      className="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Tentar novamente
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -164,6 +231,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       <span className={`text-xs font-mono animate-pulse transition-colors duration-300 ${colorClass}`}>
                         <RandomStatusText state={avatarState} />
                       </span>
+                      {/* Token rate indicator */}
+                      {tokenRate !== null && avatarState === 'streaming' && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                          ~{tokenRate} tok/s
+                        </span>
+                      )}
                     </>
                   );
                 })()}
@@ -214,6 +287,20 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Scroll-to-bottom button — aparece quando user tá scrollado pra cima */}
+      {!isNearBottom && messages.length > 0 && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 text-sm font-medium z-10 animate-fadeIn"
+          title="Voltar ao final"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7" />
+          </svg>
+          Novas mensagens
+        </button>
+      )}
     </div>
   );
 };
