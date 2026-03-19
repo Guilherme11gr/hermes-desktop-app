@@ -51,3 +51,7 @@ playwright/.cache/
 
 # Tauri
 src-tauri/gen/
+
+# Test files (Hermes agent)
+TESTE_*.txt
+teste-*.txt
