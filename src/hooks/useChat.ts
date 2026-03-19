@@ -60,6 +60,23 @@ export function useChat(): UseChatReturn {
     }
   }, [conversations]);
 
+  // Sync across windows (main <-> float) via storage event
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setConversations(parsed);
+        } catch {}
+      }
+      if (e.key === CURRENT_SESSION_KEY && e.newValue) {
+        setCurrentConversationId(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const saveCurrentConversation = useCallback((msgs: Message[]) => {
     setConversations(prev => {
       const existing = prev.find(c => c.id === currentConversationId);
