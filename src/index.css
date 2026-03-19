@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Float mode - no scrollbars on root */
+html, body {
+  overflow: hidden !important;
+}
+
 /* Custom scrollbar */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -267,4 +272,273 @@ button, .no-select {
   80%, 100% {
     content: '●●○';
   }
+}
+
+/* ========================================
+   MARKDOWN PROSE OVERRIDES
+   ======================================== */
+
+/* Better code blocks */
+.prose pre {
+  @apply bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto border border-gray-800;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.prose pre code {
+  @apply text-gray-100 text-sm;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Inline code */
+.prose code:not(pre code) {
+  @apply bg-pink-500/10 dark:bg-pink-400/20 text-pink-600 dark:text-pink-400 px-1.5 py-0.5 rounded font-mono text-sm;
+}
+
+/* Better headings */
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  @apply font-bold tracking-tight;
+}
+
+.prose h1 {
+  @apply text-2xl mb-4 mt-6;
+}
+
+.prose h2 {
+  @apply text-xl mb-3 mt-5;
+}
+
+.prose h3 {
+  @apply text-lg mb-2 mt-4;
+}
+
+/* Better lists */
+.prose ul {
+  @apply list-disc list-outside ml-4 space-y-1;
+}
+
+.prose ol {
+  @apply list-decimal list-outside ml-4 space-y-1;
+}
+
+.prose li {
+  @apply text-gray-700 dark:text-gray-300;
+}
+
+.prose li::marker {
+  @apply text-gray-400 dark:text-gray-500;
+}
+
+/* Better blockquotes */
+.prose blockquote {
+  @apply border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-3;
+}
+
+/* Better links */
+.prose a {
+  @apply text-blue-500 dark:text-blue-400 hover:underline underline-offset-2;
+}
+
+/* Better tables */
+.prose table {
+  @apply w-full border-collapse my-4;
+}
+
+.prose th {
+  @apply bg-gray-100 dark:bg-gray-800 px-3 py-2 text-left font-semibold border border-gray-200 dark:border-gray-700;
+}
+
+.prose td {
+  @apply px-3 py-2 border border-gray-200 dark:border-gray-700;
+}
+
+.prose tr:nth-child(even) {
+  @apply bg-gray-50 dark:bg-gray-900/50;
+}
+
+/* Horizontal rule */
+.prose hr {
+  @apply border-gray-200 dark:border-gray-700 my-6;
+}
+
+/* Paragraphs */
+.prose p {
+  @apply mb-3 last:mb-0;
+}
+
+/* Strong and emphasis */
+.prose strong {
+  @apply font-semibold text-gray-900 dark:text-gray-100;
+}
+
+.prose em {
+  @apply italic;
+}
+
+/* ========================================
+   COPY BUTTON FOR CODE BLOCKS
+   ======================================== */
+
+.code-block-wrapper {
+  @apply relative;
+}
+
+.code-block-wrapper pre {
+  @apply pr-12;
+}
+
+.code-block-copy {
+  @apply absolute top-2 right-2 p-1.5 rounded bg-gray-800 hover:bg-gray-700 
+         text-gray-400 hover:text-gray-200 opacity-0 group-hover:opacity-100
+         transition-all duration-200 text-xs font-mono;
+}
+
+.code-block-copy.copied {
+  @apply text-green-400 bg-green-900/50;
+}
+
+/* ========================================
+   MESSAGE ENHANCEMENTS
+   ======================================== */
+
+/* Message hover effect */
+.message-bubble {
+  @apply transition-transform duration-200;
+}
+
+.message-bubble:hover {
+  transform: translateX(2px);
+}
+
+/* User message gradient */
+.user-message {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Assistant message subtle gradient */
+.assistant-message {
+  background: linear-gradient(180deg, 
+    rgba(243, 244, 246, 1) 0%, 
+    rgba(229, 231, 235, 1) 100%
+  );
+}
+
+.dark .assistant-message {
+  background: linear-gradient(180deg, 
+    rgba(31, 41, 55, 1) 0%, 
+    rgba(17, 24, 39, 1) 100%
+  );
+}
+
+/* ========================================
+   KEYBOARD SHORTCUT HINTS
+   ======================================== */
+
+.kbd {
+  @apply inline-flex items-center justify-center px-1.5 py-0.5 
+         text-xs font-mono rounded bg-gray-200 dark:bg-gray-700
+         border border-gray-300 dark:border-gray-600
+         text-gray-600 dark:text-gray-400;
+}
+
+/* ========================================
+   SMOOTH TEXT RENDERING
+   ======================================== */
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: transparent !important;
+}
+
+/* ========================================
+   GLOW EFFECTS FOR AVATAR
+   ======================================== */
+
+.glow-green {
+  filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6));
+}
+
+.glow-blue {
+  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.5));
+}
+
+.glow-red {
+  filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.5));
+}
+
+.glow-purple {
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.5));
+}
+
+/* ========================================
+   LOADING SKELETON
+   ======================================== */
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  @apply bg-gray-300 dark:bg-gray-700 rounded animate-pulse;
+}
+
+/* ========================================
+   TOOLTIP STYLES
+   ======================================== */
+
+.tooltip {
+  @apply absolute z-50 px-2 py-1 text-xs font-medium
+         bg-gray-900 dark:bg-gray-100
+         text-white dark:text-gray-900
+         rounded shadow-lg
+         opacity-0 invisible transition-all duration-200
+         pointer-events-none;
+}
+
+.tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================
+   EASTER EGG - RAINBOW TEXT (rare)
+   ======================================== */
+
+@keyframes rainbow {
+  0% { color: #ff6b6b; }
+  14% { color: #feca57; }
+  28% { color: #48dbfb; }
+  42% { color: #1dd1a1; }
+  57% { color: #5f27cd; }
+  71% { color: #ff9ff3; }
+  85% { color: #54a0ff; }
+  100% { color: #ff6b6b; }
+}
+
+.rainbow-text {
+  animation: rainbow 3s linear infinite;
+}
+
+/* ========================================
+   FLOATING ANIMATION
+   ======================================== */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float {
+  animation: float 2s ease-in-out infinite;
 }
