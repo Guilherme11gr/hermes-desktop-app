@@ -18,7 +18,6 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
   const [face, setFace] = useState('(◕‿◕)');
   const divRef = useRef<HTMLDivElement>(null);
   const onExpandRef = useRef(onExpand);
-  const didDragRef = useRef(false);
   onExpandRef.current = onExpand;
 
   useEffect(() => {
@@ -35,15 +34,13 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
     if (!el) return;
 
     const onMouseDown = async () => {
-      didDragRef.current = false;
-
-      // Record position before drag
+      // Save position BEFORE drag
       let posBefore = { x: 0, y: 0 };
       try {
         posBefore = await getCurrentWindow().outerPosition();
       } catch { return; }
 
-      // Start OS-level drag (smooth!)
+      // Start OS-level drag (smooth, blocks until mouseup)
       try {
         await getCurrentWindow().startDragging();
       } catch {}
@@ -51,27 +48,16 @@ export const FloatButton: React.FC<FloatButtonProps> = ({
       // After drag completes, check if window moved
       try {
         const posAfter = await getCurrentWindow().outerPosition();
-        if (posAfter.x !== posBefore.x || posAfter.y !== posBefore.y) {
-          didDragRef.current = true;
+        const moved = (posAfter.x !== posBefore.x) || (posAfter.y !== posBefore.y);
+        if (!moved) {
+          // No movement = it was a click, not a drag
+          onExpandRef.current();
         }
       } catch {}
     };
 
-    // Native click: only expand if we didn't drag
-    const onClick = () => {
-      if (!didDragRef.current) {
-        onExpandRef.current();
-      }
-      didDragRef.current = false;
-    };
-
     el.addEventListener('mousedown', onMouseDown);
-    el.addEventListener('click', onClick);
-
-    return () => {
-      el.removeEventListener('mousedown', onMouseDown);
-      el.removeEventListener('click', onClick);
-    };
+    return () => el.removeEventListener('mousedown', onMouseDown);
   }, []);
 
   return (
